@@ -1,0 +1,84 @@
+# Initialization
+units		real
+boundary	p p p
+atom_style	molecular
+read_data	/Users/filiproch/PycharmProjects/LAMMPS/polymer.txt
+
+# Dreiding potential information
+region prox cylinder x 0 0 10 80 900
+
+neighbor	1 bin
+neigh_modify	every 10 one 100
+
+bond_style      harmonic
+bond_coeff	1 350 1.0
+
+angle_style     harmonic
+angle_coeff	1 60 180
+
+dihedral_style	multi/harmonic
+dihedral_coeff	1 0 0 0 0 0
+
+pair_style	lj/cut 10.5
+pair_coeff	1 1 1 1 20
+pair_coeff	2 2 0 5.0 0.5
+pair_coeff 	1 2 2.0 4.0 15
+
+create_atoms    2 single 500.00 6.00 6.00
+create_atoms    2 single 350 7.00 6.00
+create_atoms    2 single 190 2.00 6.00
+create_atoms    2 random 50 12346 prox
+
+
+group PART type 2
+
+
+#####################################################
+# Define Settings
+#compute eng all pe/atom
+#compute eatoms all reduce sum c_eng
+
+
+
+#####################################################
+# Minimization
+#
+#dump 		1 all xyz 100000000 dump/xyz.xyz
+#dump 		2 all dcd 6 dump/dump.comp.dcd
+#dump myDump all image 100 images/image.*.jpg type type size 1280 720
+#
+#reset_timestep 0
+#fix 1 all nvt temp 300.0 300.0 100.0
+#
+#thermo 20
+#thermo_style custom step pe lx ly lz press pxx pyy pzz c_eatoms
+#min_style cg
+#minimize 1e-26 1e-26 500000 1000000
+#unfix 1
+#
+#
+#undump 1
+#undump 2
+#######
+
+
+#compute csym all centro/atom fcc
+#compute peratom all pe/atom
+
+#dump 		1 all xyz 10000000 /Users/filiproch/lammps/dump/xyz_eq.xyz
+#dump 		2 all dcd 1000 /Users/filiproch/lammps/dump/dump.comp_eq.dcd
+dump		3 PART xyz 10 /Users/filiproch/lammps/dump/particle_coord_copy.txt
+dump        4 PART custom 10 /Users/filiproch/lammps/dump/custom.txt x
+
+
+#####################################################
+# Equilibration (Langevin dynamics at 300 K)
+
+velocity 	all create 300 1231
+fix		2 PART nve/limit 0.05
+fix		3 PART langevin 300 300 100.0 904297
+#fix 		2 PART ffl 100 300 300 904297
+thermo_style	custom step temp
+thermo          100000
+timestep	10
+run		100000000

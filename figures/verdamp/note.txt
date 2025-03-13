@@ -1,1 +1,0 @@
-damp 310-360, , no bonding, simplified forcefields

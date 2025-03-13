@@ -1,0 +1,9 @@
+# Ignore everything by default
+*
+
+# Except these files/folders
+!.gitignore
+!polymerrn.xyz
+!sim_numba.ipynb
+!trajectoryn.xyz
+!sim.ipynb

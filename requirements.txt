@@ -1,0 +1,9 @@
+mpi4py>=3.1.6
+numpy>=1.26.4
+matplotlib>=3.10.1
+numba>=0.61.0
+pandas>=2.2.2
+ipyparallel>=9.0.1
+holoviews>=1.19.1
+datashader>=0.16.3
+scipy>=1.14.0

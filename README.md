@@ -9,3 +9,11 @@ sim_numba.ipynb compiles in numba using njit for better performace, however it i
 sim_numba.ipynb also contains a cell with ipyparallel code allowing for running multiple simulations in parallel with variable paramemters. For best performance n_proc = n_cores.
 
 plotter() is self explanatory
+
+# Installation guide
+
+```
+git clone https://github.com/filippo1335/Ndc80simulator.git
+
+
+```

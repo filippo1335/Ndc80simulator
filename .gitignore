@@ -8,3 +8,5 @@
 !trajectoryn.xyz
 !sim.ipynb
 !figures/ipyruns
+!sim_numba.py
+!requirements.txt

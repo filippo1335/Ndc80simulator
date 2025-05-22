@@ -47,6 +47,8 @@ def polymergenerator(polymerl, headl, unit_distance=4.13):
             polymersurfaceN[k, i, 0] = polymersurfaceP[k, i, 0] + 0.1734 * unit_distance
             polymersurfaceN[k, i, 1] = polymersurfaceP[k, i, 1]
             polymersurfaceN[k, i, 2] = polymersurfaceP[k, i, 2]
+    polymersurfaceN = polymersurfaceN.reshape((140,3))
+    polymersurfaceP = polymersurfaceP.reshape((140,3))
     # For the protein heads, create one COM per head.
     # Head 0 is at [16.8, 38.0, 20.1]; each subsequent head is shifted 4 nm in x.
     COM0 = np.array([16.8, 38.0, 20.1])
@@ -132,7 +134,7 @@ def repulsive_particle(a, b, epsilon=0.1, sigma=1):
 
 
 @njit(fastmath=fastmath, cache=cache)
-def harmonic_angle(surface, COM, n, angles, K=0.001):
+def harmonic_angle(surface, COM, n, angles, K=0.01):
     N = surface.shape[0]
     force = np.empty((N, 3))
     for i in range(N):
@@ -176,7 +178,7 @@ def harmonic_angle(surface, COM, n, angles, K=0.001):
 
 
 @njit(fastmath=fastmath, cache=cache)
-def harmonic_surface(surface, COM, epsilon=0.001, sigma=2.065):
+def harmonic_surface(surface, COM, epsilon=0.01, sigma=2.065):
     N = surface.shape[0]
     force = np.empty((N, 3))
     for i in range(N):
@@ -253,11 +255,13 @@ def notverlet_multiple(COMs, surfaces, dt, random_val, mu, polymer, polymersurfa
         angle_forces = force1 + force2 + force3 + force4
         harmonic_bond = harmonic_surface(surfaces[h], COMs[h])
         lj_force_surf = np.zeros_like(surfaces[h])
-        idtheta, idx = neighbour(COMs[h])
-        surfaceneighbourP = get_surface_patch(polymersurfaceP, idtheta, idx, 1, 1)
-        surfaceneighbourN = get_surface_patch(polymersurfaceN, idtheta, idx, 1, 1)
-        lj_force_surf[3] = morse(surfaceneighbourP, surfaces[h, 3], epsi, 1)
-        lj_force_surf[4] = morse(surfaceneighbourN, surfaces[h, 4], epsi, 1)
+        #idtheta, idx = neighbour(COMs[h])
+        #surfaceneighbourP = get_surface_patch(polymersurfaceP, idtheta, idx, 2, 2)
+        #surfaceneighbourN = get_surface_patch(polymersurfaceN, idtheta, idx, 2, 2)
+        #lj_force_surf[3] = morse(surfaceneighbourP, surfaces[h, 3], epsi, 1)
+        #lj_force_surf[4] = morse(surfaceneighbourN, surfaces[h, 4], epsi, 1)
+        lj_force_surf[3] = morse(polymersurfaceP, surfaces[h, 3], epsi, 1)
+        lj_force_surf[4] = morse(polymersurfaceN, surfaces[h, 4], epsi, 1)
         for i in range(n_surface):
             surface_forces[h, i, 0] = angle_forces[i, 0] + harmonic_bond[i, 0] + lj_force_surf[i, 0]
             surface_forces[h, i, 1] = angle_forces[i, 1] + harmonic_bond[i, 1] + lj_force_surf[i, 1]
@@ -281,7 +285,7 @@ def notverlet_multiple(COMs, surfaces, dt, random_val, mu, polymer, polymersurfa
             a[0, 0] = surfaces[m, 2, 0]
             a[0, 1] = surfaces[m, 2, 1]
             a[0, 2] = surfaces[m, 2, 2]
-            f = morse(surfaces[m,2].reshape((1,3)), surfaces[h, 0], 0.00005, 1.0)
+            f = morse(surfaces[m,2].reshape((1,3)), surfaces[h, 0], 0.000001, 1.0)
             surface_forces[h, 0, 0] += f[0]
             surface_forces[h, 0, 1] += f[1]
             surface_forces[h, 0, 2] += f[2]
@@ -292,7 +296,7 @@ def notverlet_multiple(COMs, surfaces, dt, random_val, mu, polymer, polymersurfa
             a_com[0, 0] = COMs[m, 0]
             a_com[0, 1] = COMs[m, 1]
             a_com[0, 2] = COMs[m, 2]
-            f_com = repulsive_particle(COMs[m].reshape((1,3)), COMs[h], 0.000001, 4.13)
+            f_com = repulsive_particle(COMs[m].reshape((1,3)), COMs[h], 0.00001, 4.13)
             COM_forces[h, 0] += f_com[0]
             COM_forces[h, 1] += f_com[1]
             COM_forces[h, 2] += f_com[2]
@@ -380,7 +384,7 @@ def segmented_simulation(COM, surface, polymer, polymersurfaceP, polymersurfaceN
     return headhist_full, surfacehist_full
 
 
-def plotter(headhistv,id, save=False):
+def plotter(headhistv,id, save=True):
     plt.style.use('dark_background')
     render_everyN = 1
     orthogonal_distance = np.linalg.norm(headhistv[::render_everyN, 1:3]-[20,20], axis=1)
@@ -416,7 +420,7 @@ def plotter(headhistv,id, save=False):
     plt.show()
     print("shown")
     if save:
-        fig.savefig(f'engine{id}.png')
+        fig.savefig(f'{directory}/figures/engine{id}.png')
     print(f"orthogonal_diff_mean:{(orthogonal_distance[1:]-orthogonal_distance[:-1]).mean()}")
 
 
@@ -425,12 +429,14 @@ if len(sys.argv) == 1:
 else:
     job_id = sys.argv[1]
 
+#job_var = np.array()
+
 #-----------------------------------------------------------
 # RUN THE SIMULATION (SINGLE CORE)
 #-----------------------------------------------------------
 polymerLength = 10  # ten repeats
 headN = 4 # one head
-steps = 100_000_000
+steps = 1000_000_000
 batch_size = 1_000_000
 dt = 10  # fs
 #random_val = 0.01 # nm/sqrt(fs)
@@ -440,18 +446,31 @@ hist_every = 10_000
 unit_distanceX = 4.13 #nm
 temp = 310 #K
 random_val = np.sqrt(2.0*8.314*(10.0**-3) * mu * temp)/1000.0
-epsi = .00001
+epsi = .000001
 
-directory =  os.getcwd() #"/data/home/bt23708/Ndc80sim/Ndc80simulator/hpcdump/"
+directory = os.getcwd() #"/data/home/bt23708/Ndc80sim/Ndc80simulator/hpcdump/"
 
 # RUN THE SIM
 
 polymer, COMs, surfaces, polymersurfaceP, polymersurfaceN = polymergenerator(polymerLength, headN)
 start = time.perf_counter()
-headhist, surfacehist = segmented_simulation(COMs, surfaces, polymer, polymersurfaceP, polymersurfaceN,steps, dt, mu, batch_size, random_val, hist_every, epsi, headN=headN)
+headhist, surfacehist = segmented_simulation(COMs, surfaces, polymer, polymersurfaceP, polymersurfaceN,steps, dt, mu, batch_size, random_val, hist_every, epsi, headN)
 
-np.save(f"headhist_{job_id}" , headhist)
+np.save(f"{directory}/npy/headhist_{job_id}" , headhist)
 print("Simulation complete. Final COM:", headhist[-1], flush=True)
 end = time.perf_counter()
 print("Elapsed (after compilation) = {}s".format((end - start)), flush=True)
 
+with open(f"{directory}/trajectories/trajectoryn.xyz", "w") as f:
+    for t, positionsX in enumerate(np.concatenate(((np.reshape(headhist[::],(int(steps/hist_every),4,1,3))), surfacehist[::]),axis=2)):
+        #print(positionsX)
+        i = 0
+        f.write(f"24 \n \n")
+        for positions in positionsX:
+            f.write(f"C{1+i} {positions[0,0]:8.4f}{positions[0,1]:8.4f}{positions[0,2]:8.4f} \n")
+            f.write(f"C{2+i} {positions[1,0]:8.4f}{positions[1,1]:8.4f}{positions[1,2]:8.4f} \n")
+            f.write(f"C{3+i} {positions[2,0]:8.4f}{positions[2,1]:8.4f}{positions[2,2]:8.4f} \n")
+            f.write(f"C{4+i} {positions[3,0]:8.4f}{positions[3,1]:8.4f}{positions[3,2]:8.4f} \n")
+            f.write(f"C{5+i} {positions[4,0]:8.4f}{positions[4,1]:8.4f}{positions[4,2]:8.4f} \n")
+            f.write(f"C{6+i} {positions[5,0]:8.4f}{positions[5,1]:8.4f}{positions[5,2]:8.4f} \n")
+            i += 6
